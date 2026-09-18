@@ -1,5 +1,6 @@
 const { User, Product, Bid, Report, Order, Comment } = require("../models/arts.js");
 const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
 const mongoose = require('mongoose');
 
 // =============================================
@@ -45,9 +46,11 @@ exports.createUser = async (req, res) => {
             return res.status(400).json({ error: 'اسم المستخدم أو البريد الإلكتروني مستخدم بالفعل' });
         }
 
+        const hashedPassword = await bcrypt.hash(password, 12);
+
         const newUser = new User({
             username,
-            password,
+            password: hashedPassword,
             email,
             phone,
             address,
@@ -153,7 +156,7 @@ exports.deleteUser = async (req, res) => {
     }
 };
 
-// تسجيل دخول بدون تشفير
+// تسجيل الدخول
 exports.loginUser = async (req, res) => {
     try {
         const { username, password } = req.body;
@@ -162,7 +165,8 @@ exports.loginUser = async (req, res) => {
         }
 
         const user = await User.findOne({ username });
-        if (!user || user.password !== password) {
+        const passwordMatches = user && await bcrypt.compare(password, user.password);
+        if (!passwordMatches) {
             return res.status(401).json({ error: 'اسم المستخدم أو كلمة المرور غير صحيحة' });
         }
 
